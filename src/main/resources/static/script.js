@@ -9,7 +9,7 @@ function getirKitapTurleri() {
 
             selectElement.innerHTML = "";
 
-            kitapTuruJson.forEach(function(kitapTuru) {
+            kitapTuruJson.forEach(function (kitapTuru) {
                 var optionElement = document.createElement("option");
                 optionElement.value = kitapTuru.id;
                 optionElement.textContent = kitapTuru.aciklama;
@@ -26,7 +26,7 @@ function ajaxcall(url) {
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function () {
         if (this.readyState == 4 && this.status == 200) {
-            if (this.responseText == null || this.responseText == ''){
+            if (this.responseText == null || this.responseText == '') {
                 alert("Kullanıcı adınız veya parolanız hatalı!!!");
             } else {
                 document.location = 'main.html';
@@ -44,14 +44,14 @@ function giris() {
     ajaxcall("http://localhost:8080/user/login?username=" + username + "&password=" + password);
 }
 
-function anaMenuOlustur(){
+function anaMenuOlustur() {
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function () {
         if (this.readyState == 4 && this.status == 200) {
             let KitapTuruJson = JSON.parse(this.responseText);
             let menuHtml = "";
             for (const kitapTuru of KitapTuruJson) {
-                menuHtml += '<li><a href="#" onclick="getKitapByTuru('+kitapTuru.id+')">'+kitapTuru.aciklama+'</a></li>';
+                menuHtml += '<li><a href="#" onclick="getKitapByTuru(' + kitapTuru.id + ')">' + kitapTuru.aciklama + '</a></li>';
             }
             document.getElementById('main-menu').innerHTML = menuHtml;
         }
@@ -69,25 +69,75 @@ function getKitapByTuru(kitapTuruId) {
             renderHtml(kitaplarJson);
         }
     };
-    xhttp.open("GET", "/api/kitaplari-getir-kitap-turu?kitapTuru="+kitapTuruId, true);
+    xhttp.open("GET", "/api/kitaplari-getir-kitap-turu?kitapTuru=" + kitapTuruId, true);
     xhttp.send();
 }
 
-function renderHtml(json_data){
+function renderHtml(json_data) {
 
     let table_body = document.getElementById('kitapTable');
     table_body.innerHTML = '';
 
-    json_data.forEach(function(item) {
+    json_data.forEach(function (item) {
         var row = document.createElement('tr');
         row.innerHTML = '<td>' + item.id + '</td>' +
             '<td>' + item.adi + '</td>' +
             '<td>' + item.yazari + '</td>' +
             '<td>' + item.turu + '</td>' +
-            '<td><button onclick="kitapDuzelt(' + item.id + ')">Düzenle</button></td>'+
-            '<td><button onclick="kitapSil(' + item.id + ')">Sil</button></td>' ;
-            table_body.appendChild(row);
+            '<td><a href="kitap_duzelt.html?id=' + item.id + '">Düzenle</a></td>' +
+            '<td><button onclick="kitapSil(' + item.id + ')">Sil</button></td>';
+        table_body.appendChild(row);
     });
+}
+
+
+function kitapDuzelt() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get('id');
+
+    if (!id) {
+        alert("Lütfen düzeltmek istediğiniz kitabın ID'sini giriniz.");
+        return false;
+    }
+
+    const adi = document.getElementById("adi").value;
+    const yazari = document.getElementById("yazari").value;
+    const turu_id = document.getElementById("turu_id").value;
+    const aciklama = document.getElementById("aciklama").value;
+
+    if (!adi || !yazari || !turu_id || !aciklama) {
+        alert("Lütfen tüm alanları doldurun.");
+        return false;
+    }
+
+    document.getElementById("selectedBookId").innerHTML = id;
+    document.getElementById("selectedBookName").innerHTML = adi;
+
+    const kitapView = {
+        adi: adi,
+        yazari: yazari,
+        turu_id: turu_id,
+        aciklama: aciklama
+    };
+
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function () {
+        if (this.readyState == 4) {
+            if (this.status == 200) {
+                alert("Kitap başarıyla düzenlendi! Yönlendiriliyorsunuz...");
+                window.location.href = "kitap.html";
+            } else if (this.status == 404) {
+                alert("Düzenlemeye çalıştığınız kitap bulunamadı.");
+            } else {
+                alert("Kitap düzenleme işleminde bir hata oluştu. Lütfen tekrar deneyin.");
+            }
+        }
+    };
+
+    xhttp.open("PUT", "/api/kitap-bilgisi-duzelt?id=" + id, true);
+    xhttp.setRequestHeader("Content-Type", "application/json");
+    xhttp.send(JSON.stringify(kitapView));
+
 }
 
 function kitapEkle() {
@@ -100,7 +150,7 @@ function kitapEkle() {
         alert("Lütfen tüm bilgileri giriniz.");
         return false;
     }
-    console.log(adi,yazari,turu_id,aciklama);
+    console.log(adi, yazari, turu_id, aciklama);
     const kitapView = {
         adi: adi,
         yazari: yazari,
@@ -111,10 +161,11 @@ function kitapEkle() {
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function () {
         if (this.readyState == 4 && this.status == 200) {
-            if (this.responseText == null || this.responseText == ''){
+            if (this.responseText == null || this.responseText == '') {
                 alert("Kitap ekleme işleminde bir hata oluştu. Lütfen girişlerinizi kontrol edin.");
             } else {
-                alert("Kitap başarıyla eklendi!");
+                alert("Kitap başarıyla eklendi! Yönlendiriliyorsunuz...");
+                window.location.href = "kitap.html";
             }
 
         }
@@ -122,44 +173,6 @@ function kitapEkle() {
     xhttp.open("POST", "/api/kitap-kaydet", true);
     xhttp.setRequestHeader("Content-Type", "application/json");
     xhttp.send(JSON.stringify(kitapView));
-}
-function kitapDuzelt(id) {
-    if (!id) {
-        alert("Lütfen düzeltmek istediğiniz kitabın ID'sini giriniz.");
-        return false;
-    }
-
-    var yeniAdi = prompt("Yeni kitap adını giriniz:");
-    var yeniYazari = prompt("Yeni yazar adını giriniz:");
-    var yeniTuru = prompt("Yeni kitap türünü giriniz:");
-
-    if (!yeniAdi || !yeniYazari || !yeniTuru) {
-        alert("Lütfen tüm alanları doldurun.");
-        return false;
-    }
-
-    var kitapBilgisi = {
-        adi: yeniAdi,
-        yazari: yeniYazari,
-        turu: yeniTuru
-    };
-
-    var xhttp = new XMLHttpRequest();
-    xhttp.onreadystatechange = function () {
-        if (this.readyState == 4) {
-            if (this.status == 200) {
-                alert("Kitap başarıyla düzenlendi!");
-            } else if (this.status == 404) {
-                alert("Düzenlemeye çalıştığınız kitap bulunamadı.");
-            } else {
-                alert("Kitap düzenleme işleminde bir hata oluştu. Lütfen tekrar deneyin.");
-            }
-        }
-    };
-
-    xhttp.open("PUT", "/api/kitap-bilgisi-duzelt?id=" + id, true);
-    xhttp.setRequestHeader("Content-Type", "application/json");
-    xhttp.send(JSON.stringify(kitapBilgisi));
 }
 
 function kitapSil(id) {
@@ -177,20 +190,21 @@ function kitapSil(id) {
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function () {
         if (this.readyState == 4 && this.status == 200) {
-            if (this.responseText == null || this.responseText == ''){
+            if (this.responseText == null || this.responseText == '') {
                 alert("Kitap silme işleminde bir hata oluştu. Lütfen tekrar deneyin.");
             } else {
-                alert("Kitap başarıyla silindi!");
+                alert("Kitap başarıyla silindi! Yönlendiriliyorsunuz...");
+                window.location.href = "kitap.html";
             }
 
-        }
-        else if (this.status == 404) {
+        } else if (this.status == 404) {
             alert("Silmeye çalıştığınız kitap bulunamadı.");
         }
     };
-    xhttp.open("DELETE", "/api/kitap-sil?id=" + id,  true);
+    xhttp.open("DELETE", "/api/kitap-sil?id=" + id, true);
     xhttp.send();
 }
+
 function anaMenuOlustur2() {
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function () {
@@ -199,7 +213,7 @@ function anaMenuOlustur2() {
 
             let selectHtml = "";
             for (const kitapTuru of KitapTuruJson) {
-                selectHtml += '<option value="' + kitapTuru.id+ '">' + kitapTuru.aciklama + '</option>';
+                selectHtml += '<option value="' + kitapTuru.id + '">' + kitapTuru.aciklama + '</option>';
             }
             document.getElementById('kitap-turleri').innerHTML = selectHtml;
         }
@@ -207,6 +221,8 @@ function anaMenuOlustur2() {
     xhttp.open("GET", "/kitap-turu/kitap-turu-getir", true);
     xhttp.send();
 }
+
+anaMenuOlustur2();
 
 function getKitapTurleri() {
     var xhttp = new XMLHttpRequest();
@@ -229,12 +245,10 @@ function getKitapTurleri() {
                 tableRow.appendChild(aciklamaCell);
 
                 var duzenleButtonCell = document.createElement("td");
-                var duzenleButton = document.createElement("button");
+                var duzenleButton = document.createElement("a");
                 duzenleButton.textContent = "Düzenle";
+                duzenleButton.href = "kitap_turleri_duzelt.html?id=" + kitapTuru.id;
 
-                duzenleButton.onclick = function() {
-                    yenikitapTuruDuzelt(kitapTuru.id);
-                };
                 duzenleButtonCell.appendChild(duzenleButton);
                 tableRow.appendChild(duzenleButtonCell);
 
@@ -242,7 +256,7 @@ function getKitapTurleri() {
                 var silButton = document.createElement("button");
                 silButton.textContent = "Sil";
 
-                silButton.onclick = function() {
+                silButton.onclick = function () {
                     yenikitapTuruSil(kitapTuru.id);
                 };
                 silButtonCell.appendChild(silButton);
@@ -267,10 +281,11 @@ function yenikitapTuruEkle() {
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function () {
         if (this.readyState == 4 && this.status == 200) {
-            if (this.responseText == null || this.responseText == ''){
+            if (this.responseText == null || this.responseText == '') {
                 alert("Kitap türü ekleme işleminde bir hata oluştu. Lütfen girişlerinizi kontrol edin.");
             } else {
-                alert("Kitap türü başarıyla eklendi!");
+                alert("Kitap türü başarıyla eklendi! Yönlendiriliyorsunuz...");
+                window.location.href = "kitap.html";
             }
 
         }
@@ -280,22 +295,26 @@ function yenikitapTuruEkle() {
     xhttp.send(JSON.stringify(kitapTuruView));
 }
 
-function yenikitapTuruDuzelt(id) {
+function yenikitapTuruDuzelt() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get('id');
+
     if (!id) {
-        alert("Lütfen düzeltmek istediğiniz kitabın ID'sini giriniz.");
+        alert("Lütfen düzeltmek istediğiniz kitap türünün ID'sini giriniz.");
         return false;
     }
 
-    var yeniTurAdi = prompt("Yeni kitap türü adını giriniz:");
+    const adi = document.getElementById("adi").value;
 
-    if (!yeniTurAdi) {
+    if (!adi) {
         alert("Lütfen tüm alanları doldurun.");
         return false;
     }
+    document.getElementById("selectedBookId").innerHTML = id;
+    document.getElementById("selectedBookName").innerHTML = adi;
 
     var kitapTuruView = {
-        id: id,
-        aciklama: yeniTurAdi
+        aciklama: adi
     };
 
     const xhttp = new XMLHttpRequest();
@@ -304,7 +323,8 @@ function yenikitapTuruDuzelt(id) {
             if (this.responseText == null || this.responseText == '') {
                 alert("Kitap türü güncelleme işleminde bir hata oluştu. Lütfen girişlerinizi kontrol edin.");
             } else {
-                alert("Kitap türü başarıyla düzeltildi!");
+                alert("Kitap türü başarıyla düzeltildi! Yönlendiriliyorsunuz...");
+                window.location.href = "kitap.html";
             }
         }
     };
@@ -328,14 +348,14 @@ function yenikitapTuruSil(id) {
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function () {
         if (this.readyState == 4 && this.status == 200) {
-            if (this.responseText == null || this.responseText == ''){
+            if (this.responseText == null || this.responseText == '') {
                 alert("Kitap türü silme işleminde bir hata oluştu. Lütfen tekrar deneyin.");
             } else {
-                alert("Kitap türü başarıyla silindi!");
+                alert("Kitap türü başarıyla silindi! Yönlendiriliyorsunuz...");
+                window.location.href = "kitap.html";
             }
 
-        }
-        else if (this.status == 404) {
+        } else if (this.status == 404) {
             alert("Silmeye çalıştığınız kitap türü bulunamadı.");
         }
     };
